@@ -1,3 +1,4 @@
 *.out
 scratchpad.cpp
 scratchpad
+.DS_Store
