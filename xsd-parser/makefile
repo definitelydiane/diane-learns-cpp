@@ -1,7 +1,7 @@
-build: src/main.cpp
+build: src/main.cpp src/xsd_parser.cpp src/util.cpp
 	rm -rf build
 	mkdir build
-	g++ -std=c++11 -o build/xsd-parser src/main.cpp
+	g++ -std=c++11 -o build/xsd-parser src/main.cpp src/xsd_parser.cpp src/util.cpp
 
 .PHONY: test
 test: build/tests
