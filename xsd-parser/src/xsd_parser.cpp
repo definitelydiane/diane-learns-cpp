@@ -25,6 +25,10 @@ int XSDParser::parse(std::string fpath) {
 
 	std::cout << std::endl;
 
+	for(const XSDToken& token : this->tokens) {
+		std::cout << token << std::endl;
+	}
+
 	if(input.is_open()) {
 		input.close();
 	}
@@ -50,23 +54,27 @@ int XSDParser::parse_default(std::ifstream& input) {
 			if(tag_name.compare("?xml") == 0) {
 				// expect XML prologue
 				// Continue to consume chars until '>'
-				std::cout << "[XML PROLOGUE]" << std::endl;
 				input.ignore(MAX_SIZE, '>');
 			} else {
-				std::cout << (is_close ? "CLOSE " : "OPEN ") << "TAG: " << tag_name << std::endl;
+				// The parser assumes this tag will be Open or Closed
+				this->tokens.emplace_back(XSDToken{
+						is_close ? XSDToken::Type::Close : XSDToken::Type::Open,
+						tag_name,
+						{}
+				});
+
+				// Unget to check if we consumed a space or a '>'
 				input.unget();
 				if(std::isspace(input.peek()))
 					this->state = TagAttrs_Name;
 				else {
-					// std::cout << char(input.peek());
+					// The tag has closed
+					// TODO: if this tag can contain text node, then move to text node.
 					input.ignore(1);
 				}
 			}
 			break;
 		}
-		default: {
-			std::cout << c;
-	 }
 	}
 	return 0;
 }
@@ -79,17 +87,12 @@ int XSDParser::parse_tag_attr_name(std::ifstream& input) {
 
 	switch(c) {
 		case '=': {
-			if(input.peek() != '"') {
-				std::cout << "Expected '=\"' after attribute name" << std::endl;
-				throw -1;
-			} else {
-				this->state = TagAttrs_Value;
-			}
-			break;
+			std::cout << "Unexpected '=' char. Expected attr_name" << std::endl;
+			throw -1;
 		}
 		case '/': {
-			// This is a syntax error. But only if we're not in attribute_value	
 			if(input.peek() != '>') {
+				// This is a syntax error. But only if we're not in attribute_value	
 				std::cout << "Unexpected backslash" << std::endl;
 				throw -1;
 			}
@@ -97,8 +100,9 @@ int XSDParser::parse_tag_attr_name(std::ifstream& input) {
 			// Per the XML grammar, we expect the next char to be >
 			input.ignore(1);
 
-			// Debugging
-			std::cout << std::endl << std::endl;
+			// Mark this tag as self-closing
+			this->tokens.back().type = XSDToken::Type::SelfClose;
+
 			this->state = Default;
 			break;
 		}
@@ -109,8 +113,10 @@ int XSDParser::parse_tag_attr_name(std::ifstream& input) {
 		default: {
 			input.unget();
 			std::string attr_name;
+			// Read the attribute name. Account for if there is whitespace between
+			// the '=' char.
 			Util::getline(input, attr_name, " =");
-			std::cout << "ATTR_NAME: " << attr_name << std::endl;
+			this->tokens.back().attributes.push_back(XMLAttr{attr_name, ""});
 			this->state = TagAttrs_Value;
 			break;
 		}
@@ -120,12 +126,17 @@ int XSDParser::parse_tag_attr_name(std::ifstream& input) {
 
 int XSDParser::parse_tag_attr_value(std::ifstream& input) {
 	char c = input.get();
+
+	// Ignore whitespace
 	if(std::isspace(c)) return 0;
+
 	switch(c) {
 		default:
 			std::string attr_val;
+			// This ignores the first delimiter. c here is either " or '.
+			// TODO: We need to account for these two possible delimiters.
 			Util::getline(input, attr_val, "\"");
-			std::cout << "ATTR_VAL: " << attr_val <<std::endl;
+			this->tokens.back().attributes.back().value = attr_val;
 			this->state = TagAttrs_Name;
 			break;
 	}

@@ -1,4 +1,4 @@
-build: src/main.cpp src/xsd_parser.cpp src/util.cpp
+build: src/main.cpp src/xsd_parser.cpp src/util.cpp src/xsd_parser.hpp
 	rm -rf build
 	mkdir build
 	g++ -std=c++11 -o build/xsd-parser src/main.cpp src/xsd_parser.cpp src/util.cpp
