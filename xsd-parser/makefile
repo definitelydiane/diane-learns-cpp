@@ -1,3 +1,7 @@
+run: build
+	@test -n "$(FILE)" || (echo "Usage: make run FILE=<path.xsd>"; exit 1)
+	./build/xsd-parser $(FILE)
+
 build: src/main.cpp src/xsd_parser.cpp src/util.cpp src/xsd_parser.hpp
 	rm -rf build
 	mkdir build

@@ -5,7 +5,7 @@
 namespace Util {
 	// Written with reference to https://gcc.gnu.org/onlinedocs/gcc-4.7.0/libstdc++/api/a01557_source.html#l00627
 	// and Claude
-	void getline(std::istream& input, std::string& output, std::string_view delims) {
+	void getline(std::istream& input, std::string& output, std::string_view delims, bool consume_delim) {
 		using traits = std::char_traits<char>;
 		using int_type = traits::int_type;
 
@@ -51,7 +51,7 @@ namespace Util {
 			// Error handling
 			if(traits::eq_int_type(c, eof)) {
 				err |= std::ios_base::eofbit; // |= (bitwise OR assignment) is equivalent to a = a | b
-			} else {
+			} else if(consume_delim) {
 				input.rdbuf()->sbumpc(); // consume delimiter
 			}
 

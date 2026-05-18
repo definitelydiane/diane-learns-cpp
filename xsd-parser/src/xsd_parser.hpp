@@ -1,7 +1,6 @@
 #include <iostream>
 #include <string>
 #include <vector>
-#include <unordered_map>
 
 #pragma once
 
@@ -59,12 +58,35 @@ class XSDParser {
 
 	XSDParserState state = Default;
 	std::vector<XSDToken> tokens;
+	std::stack<std::string> open_tags;
 
 	public:
-		int parse(std::string fpath);
+		void parse(const std::string& fpath);
 	
 	private:
-		int parse_default(std::ifstream& input);
-		int parse_tag_attr_name(std::ifstream& input);
-		int parse_tag_attr_value(std::ifstream& input);
+		void parse_default(std::ifstream& input);
+		void parse_tag_attr_name(std::ifstream& input);
+		void parse_tag_attr_value(std::ifstream& input);
+};
+
+// Parser Errors
+struct UnexpectedEOF : public std::runtime_error {
+    UnexpectedEOF(const std::string& tag_name)
+        : std::runtime_error("Expected closing tag for element: " + tag_name)
+    {}
+};
+
+struct UnexpectedCloseTag : public std::runtime_error {
+    UnexpectedCloseTag(const std::string& tag_name)
+        : std::runtime_error(tag_name)
+    {}
+};
+
+struct UnexpectedChar : public std::runtime_error {
+		UnexpectedChar(const std::string& msg)
+			: std::runtime_error(msg)
+		{}
+    UnexpectedChar(char c)
+        : std::runtime_error(std::string("") + c)
+    {}
 };

@@ -5,5 +5,5 @@
  * is reached. Then, consume the delimiter.
  */
 namespace Util {
-	void getline(std::istream& input, std::string& output, std::string_view dleims);
+	void getline(std::istream& input, std::string& output, std::string_view delims, bool consume_delim = true);
 }

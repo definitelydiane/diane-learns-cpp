@@ -136,3 +136,15 @@ TEST_CASE("Does not modify output when stream is in a failed state", "[getline]"
 
     REQUIRE(output == "unchanged");
 }
+
+TEST_CASE("Does not consume delimiter with passed flag") {
+	std::istringstream input("my string");
+	std::string output;
+	std::string rest;
+
+	Util::getline(input, output, " ", false);
+	std::getline(input, rest);
+
+	REQUIRE(output == "my");
+	REQUIRE(rest == " string");
+}
