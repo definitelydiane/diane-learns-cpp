@@ -6,6 +6,9 @@
 
 constexpr auto MAX_SIZE = std::numeric_limits<std::streamsize>::max();
 
+// 
+const char* Attr_TextContent = "#text";
+
 void XSDParser::parse(const std::string& fpath) {
 	std::ifstream input(fpath);
 
@@ -20,6 +23,9 @@ void XSDParser::parse(const std::string& fpath) {
 			case TagAttrs_Value:
 				this->parse_tag_attr_value(input);
 				break;
+			case TextContent:
+				this->parse_text_content(input);
+				break;
 		}
 	}
 	if(this->open_tags.size()) {
@@ -30,12 +36,6 @@ void XSDParser::parse(const std::string& fpath) {
 	for(const XSDToken& token : this->tokens) {
 		std::cout << token << std::endl;
 	}
-
-	// Cleanup
-	if(input.is_open()) {
-		input.close();
-	}
-
 }
 
 void XSDParser::parse_default(std::ifstream& input) {
@@ -53,7 +53,7 @@ void XSDParser::parse_default(std::ifstream& input) {
 			// Get line until space or >. Don't consume the delimiter
 			Util::getline(input, tag_name, " >", false);
 
-			if(tag_name.compare("?xml") == 0) {
+			if(tag_name == "?xml") {
 				// expect XML prologue
 				// Continue to consume chars until '>'
 				input.ignore(MAX_SIZE, '>');
@@ -70,19 +70,22 @@ void XSDParser::parse_default(std::ifstream& input) {
 				if(is_close) {
 					if(this->open_tags.empty() || this->open_tags.top() != tag_name) {
 						throw UnexpectedCloseTag(tag_name);
+						return;
 					}
 					this->open_tags.pop();
 				} else {
 					this->open_tags.push(tag_name);
 				}
 
-				// Unget to check if we consumed a space or a '>'
 				if(std::isspace(input.peek()))
 					this->state = TagAttrs_Name;
 				else {
-					// The tag has closed
-					// TODO: if this tag can contain text node, then move to text node.
+					// Util::getline will end up on the closing '>',
+					// so we assume the tag has closed.
 					input.ignore(1);
+
+					// TODO: if this tag can contain text node, then move to text node.
+					this->state = TextContent;
 				}
 			}
 			break;
@@ -151,6 +154,32 @@ void XSDParser::parse_tag_attr_value(std::ifstream& input) {
 			// TODO do this in a less hack way.
 			this->tokens.back().attributes.back().value = attr_val;
 			this->state = TagAttrs_Name;
+			break;
+	}
+}
+
+void XSDParser::parse_text_content(std::ifstream& input) {
+	char c = input.peek();
+
+	// TODO create a method for this
+	// Itnogre whitespace
+	if(std::isspace(c) || c == EOF) {;
+		input.ignore(1);
+		return;
+	}
+
+	std::string content;
+
+	switch(c) {
+		case '<':
+			this->state = Default;
+			break;
+		default:
+			// TODO: do this less naive
+			// Get all the text until the next angle bracket. Don't consume.
+			Util::getline(input, content, "<", false);
+			this->tokens.back().attributes.push_back(XMLAttr{Attr_TextContent, content});
+			this->state = Default;
 			break;
 	}
 }

@@ -9,13 +9,6 @@ struct XMLAttr {
 	std::string value;
 };
 
-// TODO:
-// std::ostream& operator<<(std::ostream& os, const XSDToken& xsd_token)
-// Should output:
-//
-//	{tag_name}
-//		{attr_key}: {attr_value}
-//		...
 struct XSDToken {
 	enum class Type {
 		Open,
@@ -36,6 +29,7 @@ struct XSDToken {
 				break;
 			case Type::SelfClose:
 				std::cout << "SELF CLOSING TAG: " << t.tag_name << std::endl;
+				break;
 		}
 
 		if(t.attributes.size()) {
@@ -52,6 +46,7 @@ enum XSDParserState {
 	Default,
 	TagAttrs_Name,
 	TagAttrs_Value,
+	TextContent
 };
 
 class XSDParser {
@@ -67,6 +62,7 @@ class XSDParser {
 		void parse_default(std::ifstream& input);
 		void parse_tag_attr_name(std::ifstream& input);
 		void parse_tag_attr_value(std::ifstream& input);
+		void parse_text_content(std::ifstream& input);
 };
 
 // Parser Errors
