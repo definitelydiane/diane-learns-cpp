@@ -46,7 +46,7 @@ enum XSDParserState {
 	Default,
 	TagAttrs_Name,
 	TagAttrs_Value,
-	TextContent
+	TextContent,
 };
 
 class XSDParser {
@@ -63,6 +63,7 @@ class XSDParser {
 		void parse_tag_attr_name(std::ifstream& input);
 		void parse_tag_attr_value(std::ifstream& input);
 		void parse_text_content(std::ifstream& input);
+		void parse_comment(std::ifstream& input);
 };
 
 // Parser Errors

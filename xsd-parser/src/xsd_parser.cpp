@@ -6,12 +6,12 @@
 
 constexpr auto MAX_SIZE = std::numeric_limits<std::streamsize>::max();
 
-// 
-const char* Attr_TextContent = "#text";
+constexpr const char* Attr_TextContent = "#text";
 
 void XSDParser::parse(const std::string& fpath) {
 	std::ifstream input(fpath);
 
+	try {
 	while(input.good()) {
 		switch(this->state) {
 			case Default:
@@ -31,6 +31,13 @@ void XSDParser::parse(const std::string& fpath) {
 	if(this->open_tags.size()) {
 		throw UnexpectedEOF(this->open_tags.top());
 	}
+	} catch(...) {
+// Debugging / printing
+	for(const XSDToken& token : this->tokens) {
+		std::cout << token << std::endl;
+	}
+	throw;
+	}
 
 	// Debugging / printing
 	for(const XSDToken& token : this->tokens) {
@@ -42,11 +49,18 @@ void XSDParser::parse_default(std::ifstream& input) {
 	char c = input.get();
 	switch(c) {
 		case '<': {
-			// Open tag
-			
+			// Possible meanings: open tag, close tag, comment?
+
+			if(input.peek() == '!') {
+				input.ignore(MAX_SIZE, '>');
+				// Debugging
+				std::cout << "Ignoring comment..." << std::endl;
+				return;
+			}
 			// Check to see if this is a close tag
 			bool is_close = input.peek() == '/';
 			if(is_close) input.ignore(1);
+
 
 			std::string tag_name;
 
@@ -55,8 +69,9 @@ void XSDParser::parse_default(std::ifstream& input) {
 
 			if(tag_name == "?xml") {
 				// expect XML prologue
-				// Continue to consume chars until '>'
-				input.ignore(MAX_SIZE, '>');
+				// Continue to consume chars until '?>'
+				input.ignore(MAX_SIZE, '?');
+				input.ignore(1);
 			} else {
 				// TODO: This logic can be handled by a separate method.
 				// The parser assumes this tag will be Open or Closed
@@ -70,7 +85,6 @@ void XSDParser::parse_default(std::ifstream& input) {
 				if(is_close) {
 					if(this->open_tags.empty() || this->open_tags.top() != tag_name) {
 						throw UnexpectedCloseTag(tag_name);
-						return;
 					}
 					this->open_tags.pop();
 				} else {
@@ -147,9 +161,16 @@ void XSDParser::parse_tag_attr_value(std::ifstream& input) {
 	switch(c) {
 		default:
 			std::string attr_val;
-			// This ignores the first delimiter. c here is either " or '.
+
 			// TODO: We need to account for these two possible delimiters.
-			Util::getline(input, attr_val, "\"");
+			// Check to see if this is an empty string
+			if(input.peek() != '"') {
+				// This ignores the first delimiter. c here is either " or '.
+				Util::getline(input, attr_val, "\"");
+			} else {
+				// Otherwise just consume the '"'
+				input.ignore(1);
+			}
 
 			// TODO do this in a less hack way.
 			this->tokens.back().attributes.back().value = attr_val;
@@ -159,7 +180,7 @@ void XSDParser::parse_tag_attr_value(std::ifstream& input) {
 }
 
 void XSDParser::parse_text_content(std::ifstream& input) {
-	char c = input.peek();
+	int c = input.peek();
 
 	// TODO create a method for this
 	// Itnogre whitespace
