@@ -3,6 +3,12 @@
 #include <iostream>
 
 namespace Util {
+	void getline(std::istream& input, std::string& output, char delim, bool consume_delim) {
+		std::getline(input, output, delim);
+		if(!consume_delim) {
+			input.unget();
+		}
+	}
 	// Written with reference to https://gcc.gnu.org/onlinedocs/gcc-4.7.0/libstdc++/api/a01557_source.html#l00627
 	// and Claude
 	void getline(std::istream& input, std::string& output, std::string_view delims, bool consume_delim) {

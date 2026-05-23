@@ -14,10 +14,12 @@ struct XSDToken {
 		Open,
 		Close,
 		SelfClose,
+		TextContent,
 	};
 	Type type;
 	std::string tag_name;
 	std::vector<XMLAttr> attributes;
+	std::string text_content;
 
 	friend std::ostream& operator<<(std::ostream& os, const XSDToken& t) {
 		switch(t.type) {
@@ -30,6 +32,8 @@ struct XSDToken {
 			case Type::SelfClose:
 				std::cout << "SELF CLOSING TAG: " << t.tag_name << std::endl;
 				break;
+			case Type::TextContent:
+				break;
 		}
 
 		if(t.attributes.size()) {
@@ -37,6 +41,9 @@ struct XSDToken {
 			for(const XMLAttr& a : t.attributes) {
 				std::cout << '\t' << a.name << '=' << a.value << std::endl;
 			}
+		}
+		if(t.type == Type::TextContent) {
+			std::cout << "TEXT CONTENT:" << std::endl << t.text_content << std::endl;
 		}
 		return os;
 	}

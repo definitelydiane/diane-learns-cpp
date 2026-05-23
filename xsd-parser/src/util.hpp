@@ -6,4 +6,5 @@
  */
 namespace Util {
 	void getline(std::istream& input, std::string& output, std::string_view delims, bool consume_delim = true);
+	void getline(std::istream& input, std::string& output, char delim, bool consume_delim = true);
 }

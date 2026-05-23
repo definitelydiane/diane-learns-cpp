@@ -12,31 +12,31 @@ void XSDParser::parse(const std::string& fpath) {
 	std::ifstream input(fpath);
 
 	try {
-	while(input.good()) {
-		switch(this->state) {
-			case Default:
-				this->parse_default(input);
-				break;
-			case TagAttrs_Name:
-				this->parse_tag_attr_name(input);
-				break;
-			case TagAttrs_Value:
-				this->parse_tag_attr_value(input);
-				break;
-			case TextContent:
-				this->parse_text_content(input);
-				break;
+		while(input.good()) {
+			switch(this->state) {
+				case Default:
+					this->parse_default(input);
+					break;
+				case TagAttrs_Name:
+					this->parse_tag_attr_name(input);
+					break;
+				case TagAttrs_Value:
+					this->parse_tag_attr_value(input);
+					break;
+				case TextContent:
+					this->parse_text_content(input);
+					break;
+			}
 		}
-	}
-	if(this->open_tags.size()) {
-		throw UnexpectedEOF(this->open_tags.top());
-	}
+		if(this->open_tags.size()) {
+			throw UnexpectedEOF(this->open_tags.top());
+		}
 	} catch(...) {
-// Debugging / printing
-	for(const XSDToken& token : this->tokens) {
-		std::cout << token << std::endl;
-	}
-	throw;
+		// Debugging / printing
+		for(const XSDToken& token : this->tokens) {
+			std::cout << token << std::endl;
+		}
+		throw;
 	}
 
 	// Debugging / printing
@@ -51,10 +51,9 @@ void XSDParser::parse_default(std::ifstream& input) {
 		case '<': {
 			// Possible meanings: open tag, close tag, comment?
 
+			// Not good way to do this, but ¯\_(ツ)_/¯
 			if(input.peek() == '!') {
 				input.ignore(MAX_SIZE, '>');
-				// Debugging
-				std::cout << "Ignoring comment..." << std::endl;
 				return;
 			}
 			// Check to see if this is a close tag
@@ -93,13 +92,18 @@ void XSDParser::parse_default(std::ifstream& input) {
 
 				if(std::isspace(input.peek()))
 					this->state = TagAttrs_Name;
-				else {
+				else if(tag_name == "xs:documentation" || tag_name == "xs:appinfo") {
 					// Util::getline will end up on the closing '>',
 					// so we assume the tag has closed.
 					input.ignore(1);
 
-					// TODO: if this tag can contain text node, then move to text node.
+					this->tokens.emplace_back(XSDToken{
+						XSDToken::Type::TextContent
+					});
+
 					this->state = TextContent;
+				} else {
+					input.ignore(1);
 				}
 			}
 			break;
@@ -145,6 +149,7 @@ void XSDParser::parse_tag_attr_name(std::ifstream& input) {
 			// Read the attribute name. Account for if there is whitespace between
 			// the '=' char.
 			Util::getline(input, attr_name, " =");
+			// TODO: do this in a sane way
 			this->tokens.back().attributes.push_back(XMLAttr{attr_name, ""});
 			this->state = TagAttrs_Value;
 			break;
@@ -159,14 +164,17 @@ void XSDParser::parse_tag_attr_value(std::ifstream& input) {
 	if(std::isspace(c)) return;
 
 	switch(c) {
-		default:
+		case '\'':
+		case '"':
+		{
+			char delim = c;
 			std::string attr_val;
 
 			// TODO: We need to account for these two possible delimiters.
 			// Check to see if this is an empty string
-			if(input.peek() != '"') {
+			if(input.peek() != delim) {
 				// This ignores the first delimiter. c here is either " or '.
-				Util::getline(input, attr_val, "\"");
+				Util::getline(input, attr_val, delim);
 			} else {
 				// Otherwise just consume the '"'
 				input.ignore(1);
@@ -176,6 +184,9 @@ void XSDParser::parse_tag_attr_value(std::ifstream& input) {
 			this->tokens.back().attributes.back().value = attr_val;
 			this->state = TagAttrs_Name;
 			break;
+		}
+		default:
+			throw UnexpectedChar("Expected char ' or \" but found " + std::string(1, c));
 	}
 }
 
@@ -199,8 +210,9 @@ void XSDParser::parse_text_content(std::ifstream& input) {
 			// TODO: do this less naive
 			// Get all the text until the next angle bracket. Don't consume.
 			Util::getline(input, content, "<", false);
-			this->tokens.back().attributes.push_back(XMLAttr{Attr_TextContent, content});
+			this->tokens.back().text_content = content;
 			this->state = Default;
 			break;
 	}
 }
+
